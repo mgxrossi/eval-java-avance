@@ -8,7 +8,7 @@ import java.time.LocalDate;
  */
 public class Session {
     private int id;
-    private Formation formation;
+    private Formation formation; //En base de données, la table session contient un simple numéro, id_formation. En Java, on stocke directement l'objet Formation entier. C'est ce qui permet d'écrire session.getFormation().getName() pour obtenir le nom
     private LocalDate startDate;
     private int availableSeats;
 
@@ -47,7 +47,7 @@ public class Session {
     public String toString() {
         String line = formation.getName() + " | " + formation.getMode() + " | " + formation.getPrice() + " € TTC";
         if (isFull()) {
-            line += " | COMPLET";
+            line += " | COMPLET"; //signifie « ajoute ce texte à la fin de line ».
         }
         return line;
     }
