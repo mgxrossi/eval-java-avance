@@ -4,21 +4,48 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 
+import fr.fms.business.CartBusiness;
+import fr.fms.business.CartBusinessImpl;
+import fr.fms.business.CartException;
 import fr.fms.business.CatalogBusiness;
 import fr.fms.business.CatalogBusinessImpl;
+import fr.fms.entities.Cart;
 import fr.fms.entities.Mode;
 import fr.fms.entities.Session;
 
 /**
- * Point d'entrée de l'application : menu console du catalogue de formations.
+ * Point d'entrée : menu console du catalogue (couche application).
+ * <p>Affiche, lit les saisies, affiche les résultats. Aucune règle métier, aucun SQL :
+ * tout passe par la business. Seule couche à remplacer pour passer au web.</p>
+ * <p>Tout est static car main est lancé sans créer d'objet App.</p>
+ * <p>P1 : catalogue trié (nom/date), filtre par mode, recherche, détail.
+ * P2 (en cours) : ajout au panier, panier + total, retrait.</p>
  */
 public class App {
 
+    /** Lit le clavier (= input() en Python). Créé 1 fois, partagé. */
     private static final Scanner scanner = new Scanner(System.in);
+
+    /** Business du catalogue. Typé par l'interface : le menu sait "quoi", pas "comment". */
     private static final CatalogBusiness catalog = new CatalogBusinessImpl();
+
+    /**
+     * Business du panier. Créé 1 seule fois au démarrage → un seul panier
+     * pour toute la session. En mémoire : vidé quand on quitte le programme.
+     */
+    private static final CartBusiness cartBusiness = new CartBusinessImpl();
+
+    /** Format FR des dates : 12/10/2026 au lieu de 2026-10-12. */
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public static void main(String[] args) { //C'est le point de départ du programme. Quand tu cliques sur Run, Java cherche cette méthode et l'exécute
+    /**
+     * Départ du programme (lancé par Run).
+     * <p>do...while : menu affiché au moins 1 fois, puis répété tant que choix ≠ 0.
+     * switch : oriente chaque choix ; break = sortir du switch ; default = autre chiffre.</p>
+     *
+     * @param args non utilisés
+     */
+    public static void main(String[] args) {
         System.out.println("=== Bienvenue dans le catalogue de formations ===");
         int choice;
         do {
@@ -32,6 +59,7 @@ public class App {
                     showList(catalog.getSessionsSortedByDate());
                     break;
                 case 3:
+                    // Le code écrit le mode, pas l'utilisateur : pas de faute possible
                     showList(catalog.getSessionsByMode(Mode.PRESENTIEL));
                     break;
                 case 4:
@@ -40,6 +68,9 @@ public class App {
                 case 5:
                     search();
                     break;
+                case 6:
+                    showCart();
+                    break;
                 case 0:
                     System.out.println("Au revoir !");
                     break;
@@ -47,14 +78,10 @@ public class App {
                     System.out.println("Choix invalide, veuillez recommencer.");
             }
         } while (choice != 0);
-        scanner.close();
-        /* fais ceci, tant que le choix n'est pas 0 ». On affiche le menu, on lit le choix, on l'exécute, 
-        puis on recommence. Quand l'utilisateur tape 0, la boucle s'arrête et le programme se termine 
-        do ... while plutôt que while parce que le menu doit s'afficher au moins une fois, avant même de connaître le choix
-        Le switch : selon la valeur de choice, on va au case correspondant*/
+        scanner.close(); // on ferme le clavier, comme les requêtes dans le DAO
     }
 
-    /** Affiche le menu principal. */
+    /** Affiche le menu (méthode à part pour garder main lisible). */
     private static void displayMenu() {
         System.out.println();
         System.out.println("1. Afficher le catalogue (tri par nom)");
@@ -62,13 +89,21 @@ public class App {
         System.out.println("3. Afficher seulement le présentiel");
         System.out.println("4. Afficher seulement le distanciel");
         System.out.println("5. Rechercher par mot-clé");
+        System.out.println("6. Voir mon panier");
         System.out.println("0. Quitter");
         System.out.print("Votre choix : ");
     }
 
     /**
-     * Affiche une liste numérotée de sessions, puis propose d'en voir le détail.
-     * On reste sur la liste jusqu'à ce que l'utilisateur tape 0.
+     * Affiche une liste numérotée puis propose le détail. Réutilisée par les choix 1 à 4 et la recherche.
+     * <ul>
+     *   <li>Liste vide → message + return.</li>
+     *   <li>Affichage i + 1 : Java compte dès 0, l'humain dès 1. Ligne = toString() de Session.</li>
+     *   <li>Numéro valide → session = get(number - 1), relue en BDD par son id pour avoir les places à jour.</li>
+     *   <li>Boucle : retour à la liste après chaque détail ; 0 = menu ; sinon "Numéro invalide".</li>
+     * </ul>
+     *
+     * @param sessions sessions déjà triées/filtrées par la business
      */
     private static void showList(List<Session> sessions) {
         if (sessions.isEmpty()) {
@@ -80,27 +115,31 @@ public class App {
             System.out.println();
             for (int i = 0; i < sessions.size(); i++) {
                 System.out.println((i + 1) + ". " + sessions.get(i));
-                //i + 1 car en Java une liste commence à  0 mais pour l utilisateur on préfère compter à partir de 1
-                //Chaque ligne s'affiche grâce au toString() de Session
             }
             System.out.print("Numéro d'une formation pour voir son détail (0 pour revenir au menu) : ");
-            number = readInt(); // On récupère ce que l'utilisateur a tapé
-            if (number >= 1 && number <= sessions.size()) { //on verif que le numero existe, le numéro est au moins 1 ET ne depasse pas le nombre reel de sessions
+            number = readInt();
+            if (number >= 1 && number <= sessions.size()) {
                 Session selected = sessions.get(number - 1);
-                showDetail(catalog.getSession(selected.getId())); //on prend le numéro en base de la session choisie, on redemande cette session à la couche business et on affiche son détail
+                showDetail(catalog.getSession(selected.getId()));
             } else if (number != 0) {
                 System.out.println("Numéro invalide.");
-            //Java range le premier élément d'une liste à la position 0. Le numéro 2 affiché à l'écran correspond donc à la position 1 pour Java. D'où number - 1
-            /*On affiche le détail. On redemande la session à la couche business avec son identifiant, 
-            On relit les infos de la session pour avoir des informations à jour, notamment les places restantes */
             }
         } while (number != 0);
-        //L'utilisateur tape un numéro pour voir le détail, et revient à la liste ensuite. 0 ramène au menu
     }
 
-    /** Affiche toutes les informations d'une session. */
+    /**
+     * Affiche le détail d'une session et propose l'ajout au panier (demande du client).
+     * <ul>
+     *   <li>null (introuvable en BDD) → message, pour ne pas planter.</li>
+     *   <li>Infos de la formation via session.getFormation().</li>
+     *   <li>(cond ? A : B) = "si... sinon" en 1 ligne : COMPLET ou nb de places.</li>
+     *   <li>1 = ajouter ; tout autre choix = retour auto à la liste.</li>
+     * </ul>
+     *
+     * @param session session à afficher (peut être null)
+     */
     private static void showDetail(Session session) {
-        if (session == null) { //Tu te souviens que le DAO renvoie null s'il ne trouve rien ? C'est ici qu'on gère ce cas sinon tout planterait qd une session n existe pas
+        if (session == null) {
             System.out.println("Cette formation n'est plus disponible.");
             return;
         }
@@ -109,15 +148,80 @@ public class App {
         System.out.println("Description      : " + session.getFormation().getDescription());
         System.out.println("Durée            : " + session.getFormation().getDurationDays() + " jours");
         System.out.println("Date de début    : " + session.getStartDate().format(DATE_FORMAT));
-        System.out.println("Places restantes : " + (session.isFull() ? "COMPLET" : session.getAvailableSeats())); //la session est-elle complète ? Si oui, affiche COMPLET ; sinon, affiche le nombre de places
-                                                                                              //Le ? pose la question, et le : sépare les deux réponses possibles.
-        System.out.println("Prix             : " + session.getFormation().getPrice() + " € TTC");
-        System.out.print("Appuyez sur Entrée pour revenir à la liste...");
-        scanner.nextLine(); //Le programme attend que l'utilisateur appuie sur Entrée avant de revenir à la liste
-        //on affiche toutes les informations, en allant chercher celles de la formation avec session.getFormation()
+        System.out.println("Places restantes : " + (session.isFull() ? "COMPLET" : session.getAvailableSeats()));
+        System.out.println("Prix             : " + session.getFormation().getPrice() + " euros TTC");
+        System.out.println();
+        System.out.println("1. Ajouter au panier");
+        System.out.println("0. Retour à la liste");
+        System.out.print("Votre choix : ");
+        if (readInt() == 1) {
+            addToCart(session);
+        }
     }
 
-    /** Demande un mot-clé et affiche les formations correspondantes. */
+    /**
+     * Essaie d'ajouter au panier et informe l'utilisateur.
+     * <ul>
+     *   <li>OK → confirmation.</li>
+     *   <li>Règle bloquée (complète = RG3, doublon = RG4) → la business lance une CartException,
+     *       on saute dans le catch et on affiche e.getMessage().</li>
+     * </ul>
+     * <p>try...catch obligatoire : l'interface déclare "throws CartException".
+     * Résultat : jamais de plantage, et la business n'affiche jamais rien.</p>
+     *
+     * @param session session à ajouter
+     */
+    private static void addToCart(Session session) {
+        try {
+            cartBusiness.addToCart(session);
+            System.out.println("Formation ajoutée au panier.");
+        } catch (CartException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /**
+     * Affiche le panier + total, et permet de retirer une formation.
+     * <ul>
+     *   <li>Panier relu à chaque tour (il change après un retrait).</li>
+     *   <li>Vide → message + retour menu (rien ajouté, ou dernier élément retiré).</li>
+     *   <li>Total en bas (demande du client), calculé par Cart.getTotal().</li>
+     *   <li>Numéro valide → retrait via get(number - 1) ; 0 = menu ; sinon "Numéro invalide".</li>
+     * </ul>
+     * <p>Pas de try...catch : retirer ne peut pas échouer (pas de "throws").</p>
+     */
+    private static void showCart() {
+        int number;
+        do {
+            Cart cart = cartBusiness.getCart();
+            System.out.println();
+            if (cart.isEmpty()) {
+                System.out.println("Votre panier est vide.");
+                return;
+            }
+            System.out.println("=== Votre panier ===");
+            List<Session> sessions = cart.getSessions();
+            for (int i = 0; i < sessions.size(); i++) {
+                System.out.println((i + 1) + ". " + sessions.get(i));
+            }
+            System.out.println("Total : " + cart.getTotal() + " euros TTC");
+            System.out.print("Numéro d'une formation à retirer (0 pour revenir au menu) : ");
+            number = readInt();
+            if (number >= 1 && number <= sessions.size()) {
+                cartBusiness.removeFromCart(sessions.get(number - 1));
+                System.out.println("Formation retirée du panier.");
+            } else if (number != 0) {
+                System.out.println("Numéro invalide.");
+            }
+        } while (number != 0);
+    }
+
+    /**
+     * Recherche par mot-clé dans le nom et la description.
+     * <p>La business refuse un mot vide et retire les espaces ; la BDD ignore
+     * majuscules et accents ("developpeur" trouve "Développeur").
+     * Aucun résultat → message exact du client ; sinon réutilise showList.</p>
+     */
     private static void search() {
         System.out.print("Mot-clé : ");
         String keyword = scanner.nextLine();
@@ -126,20 +230,27 @@ public class App {
             System.out.println("Aucune formation ne correspond à votre recherche.");
         } else {
             showList(results);
-            //On lit le mot-clé tapé, puis on demande la recherche à la couche business
-            //si rien alors on le dit sinon on réutilise showlist
         }
     }
 
-    /** Lit un nombre entier tapé par l'utilisateur, en redemandant tant que ce n'en est pas un et sans planter */
+    /**
+     * Lit un entier en redemandant tant que la saisie n'en est pas un (ex. "abc").
+     * <ul>
+     *   <li>Lit la ligne entière (trim = retire les espaces autour).</li>
+     *   <li>parseInt réussit → return (seule sortie de la boucle).</li>
+     *   <li>Échec → NumberFormatException attrapée, message, while (true) recommence.</li>
+     * </ul>
+     * <p>nextLine() et pas nextInt() : nextInt() laisse la touche Entrée dans le buffer,
+     * et le nextLine() suivant renverrait une ligne vide sans attendre l'utilisateur.</p>
+     *
+     * @return l'entier saisi
+     */
     private static int readInt() {
         while (true) {
-            String line = scanner.nextLine().trim(); //nextLine() prend toute la ligne, Entrée compris, Le prochain nextLine() attendra donc vraiment que l'utilisateur tape quelque chose
-                               //Mais nextLine() renvoie du texte "5" pas un nombre donc convertion avec Integer.parseInt(...).
+            String line = scanner.nextLine().trim();
             try {
-                return Integer.parseInt(line); //Integer.parseInt(line) essaie de la transformer une ligne de texte en nombre
-                                                      //Si ça marche, return renvoie le nombre, et la méthode s'arrête
-            } catch (NumberFormatException e) { ////Si ça rate, Java lance une erreur NumberFormatException. Le catch l'attrape, affiche un message, et la boucle while (true) recommence : on redemande
+                return Integer.parseInt(line);
+            } catch (NumberFormatException e) {
                 System.out.print("Veuillez entrer un nombre : ");
             }
         }
