@@ -155,6 +155,7 @@ public class App {
         System.out.println("0. Retour à la liste");
         System.out.print("Votre choix : ");
         if (readInt() == 1) {
+    System.out.println("CONTROLE 1 : choix 1 bien lu");
             addToCart(session);
         }
     }
@@ -173,6 +174,7 @@ public class App {
      */
     private static void addToCart(Session session) {
         try {
+            System.out.println("CONTROLE 2 : appel de la business");
             cartBusiness.addToCart(session);
             System.out.println("Formation ajoutée au panier.");
         } catch (CartException e) {

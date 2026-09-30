@@ -16,12 +16,16 @@ public class CartBusinessImpl implements CartBusiness { //je signe le contrat Ca
     public void addToCart(Session session) throws CartException { //ajouter en verifiant les regles
                                       //@Override signale que c'est la méthode promise par le contrat. 
                                       // On y retrouve le throws CartException annoncé dans l'interface
-        if (session.isFull()) { //Premier contrôle : la session est-elle complète ? on demande a la session elle meme, si oui throw arrete immediatement la methode et message d alerte
-            throw new CartException("Cette session est complète, elle ne peut pas être ajoutée au panier.");
+      System.out.println("CONTROLE 3 : vérification complète");
+      if (session.isFull()) { //Premier contrôle : la session est-elle complète ? on demande a la session elle meme, si oui throw arrete immediatement la methode et message d alerte
+            throw new Cart
+            Exception("Cette session est complète, elle ne peut pas être ajoutée au panier.");
         }
+        System.out.println("CONTROLE 4 : vérification doublon");
         if (cart.contains(session)) { //est-elle déjà dans le panier ?
             throw new CartException("Cette formation est déjà dans votre panier.");
         }
+        System.out.println("CONTROLE 5 : ajout dans le panier");
         cart.add(session); //Si on arrive jusqu'ici, c'est que les deux contrôles sont passés. On ajoute donc la session au panier
     }
 
