@@ -123,3 +123,6 @@ public class SessionDao implements Dao<Session> { //SessionDao signe le contrat 
         //Puis on fabrique la session, en lui donnant la formation qu'on vient de créer
     }
 }
+
+//toSession est appelée à l'intérieur du try de read
+//Le try délimite une zone surveillée, et le catch est le filet placé sous cette zone. Toute erreur de type SQLException qui survient dans la zone tombe dans ce filet, y compris celles qui viennent d'une méthode appelée depuis cette zone
