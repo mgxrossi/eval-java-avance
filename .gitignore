@@ -1,0 +1,11 @@
+# Fichiers compilés (recréés à chaque lancement)
+bin/
+*.class
+
+# Réglages personnels de VS Code (on garde settings.json, utile à tous)
+.vscode/*
+!.vscode/settings.json
+
+# Fichiers système
+.DS_Store
+Thumbs.db
