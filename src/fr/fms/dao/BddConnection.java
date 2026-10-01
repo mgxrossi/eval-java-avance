@@ -24,7 +24,7 @@ public class BddConnection {
             try (InputStream input = new FileInputStream("resources/config.properties")) {
                 Properties props = new Properties();
                 props.load(input);
-                connection = DriverManager.getConnection(
+                connection = DriverManager.getConnection( // trois lignes qui lisent config.properties au lieu d'écrire les valeurs en dur.
                         props.getProperty("db.url"),
                         props.getProperty("db.login"),
                         props.getProperty("db.password"));
