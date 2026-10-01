@@ -16,15 +16,26 @@ import java.util.Properties; //Comprendre les lignes nom=valeur du fichier (dict
  */
 public class BddConnection {
     private static Connection connection = null;
+     //static : cette case appartient à la classe elle-même, et non à un objet
+        //y en a qu une seule partagée par tout le monde pour tout le programme
+        //Connection : le type de ce qu'on y range, une connexion à une base de données
+        //au démarrage, la case est vide
 
     private BddConnection() { }
+    //le constructeur privé vide
+    //Résultat : personne, ailleurs dans le code, ne peut écrire new BddConnection()
+    //Pour être sûr qu'on ne fabrique jamais plusieurs objets BddConnection
+    //C'est le principe du Singleton : un objet qui n'existe qu'en un seul exemplaire
 
     public static Connection getConnection() {
-        if (connection == null) {
+       
+        if (connection == null) { //C'est ce if qui garantit qu'on n'ouvre la connexion qu'une seule fois
             try (InputStream input = new FileInputStream("resources/config.properties")) {
-                Properties props = new Properties();
-                props.load(input);
-                connection = DriverManager.getConnection(
+                //ouvre le fichier de config, en partant de la racine du projet
+                Properties props = new Properties(); //crée un « dictionnaire » vide, props
+                props.load(input); //load lit le fichier et le remplit, ligne par ligne
+                connection = DriverManager.getConnection( //reçoit ces trois informations, et ouvre la connexion grâce au pilote JDBC
+                    //connexion = : range la connexion ouverte dans la case static
                         props.getProperty("db.url"),
                         props.getProperty("db.login"),
                         props.getProperty("db.password"));
@@ -32,6 +43,8 @@ public class BddConnection {
                 System.out.println("Connexion à la base impossible : " + e.getMessage());
             }
         }
-        return connection;
+        return connection; //On renvoie la connexion à celui qui l'a demandée
     }
 }
+
+//try-with-resources : le fichier sera refermé automatiquement à la fin, même en cas d'erreur

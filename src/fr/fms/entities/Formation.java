@@ -21,6 +21,8 @@ public class Formation {
         this.price = price;
     }
 
+    //Les getters qui rendent une valeur et c'est tout
+    //Les attributs sont private : personne ne peut les lire directement. Le getter sert uniquement à ouvrir un accès en lecture
     public int getId() {
         return id;
     }

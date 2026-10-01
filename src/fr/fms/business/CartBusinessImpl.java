@@ -18,8 +18,7 @@ public class CartBusinessImpl implements CartBusiness { //je signe le contrat Ca
                                       // On y retrouve le throws CartException annoncé dans l'interface
       System.out.println("CONTROLE 3 : vérification complète");
       if (session.isFull()) { //Premier contrôle : la session est-elle complète ? on demande a la session elle meme, si oui throw arrete immediatement la methode et message d alerte
-            throw new Cart
-            Exception("Cette session est complète, elle ne peut pas être ajoutée au panier.");
+            throw new CartException("Cette session est complète, elle ne peut pas être ajoutée au panier.");
         }
         System.out.println("CONTROLE 4 : vérification doublon");
         if (cart.contains(session)) { //est-elle déjà dans le panier ?

@@ -11,7 +11,7 @@ public class Cart {
     private List<Session> sessions = new ArrayList<>(); //une liste qui ne peut contenir que des sessions
                                                            //session le nom de la variable
                                                            //liste vide, un panier neuf ne contient rien
-//private cad aucune autre classe ne peut toucher directement à cette liste. Elle doit passer par les méthodes ci-dessous
+//private cad aucune autre classe ne peut toucher directement à cette liste. Elle doit passer par les méthodes getter ci-dessous
 
     public List<Session> getSessions() { //getter qui permet au menu de lire la liste pour l'afficher
         return sessions;
@@ -45,7 +45,8 @@ public class Cart {
     public boolean isEmpty() {
         return sessions.isEmpty();
         //Répond true si le panier ne contient rien. Le menu l'utilise pour afficher « Votre panier est vide »
-    }
+    }    //travail deja fait par la liste la juste on donne sa rep
+         //les listes Java ont déjà une méthode isEmpty(), écrite par les créateurs de Java
 
     /** Additionne le prix de toutes les sessions du panier. */
     public double getTotal() { //double : la méthode renvoie un nombre à virgule
